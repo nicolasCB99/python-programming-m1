@@ -1,37 +1,78 @@
-# Main program for the assignment.
-#Imports teh custom modules for formatting and statistics, 
-# and uses datetime from the standard library.
+import random
+from game_entities import Player, Enemy
 
-from datetime import datetime  # built-in library module with the second import style: from module import function
-import text_utils  # import style 1: import module_name
-import stats_utils 
+# Main program for the battle game.
+# Imports the Player and Enemy classes and runs the battle encounter.
+
+# Creates a random enemy for the encounter
+def create_random_enemy():
+
+    monster = random.choice(["wolf", "goblin", "orc"])
+
+    return Enemy(monster)
+
 
 def main():
-    raw_text = "   hello    from   python   programming!  \nThis is module 5.   "
 
-    cleaned = text_utils.clean_text(raw_text)
-    titled = text_utils.title_case(cleaned)
+    print("=== Simple Battle Game ===")
 
-    print("Text Utility Project")
-    print("Timestamp:", datetime.now())
-    print()
+    player_name = input("Enter your character name: ")
 
-    print("Original text:")
-    print(raw_text)
-    print()
+    player = Player(player_name)
 
-    print("Cleaned text:")
-    print(cleaned)
-    print()
+    enemy = create_random_enemy()
 
-    print("Title cased text:")
-    print(titled)
-    print()
+    print("\nA wild enemy appears!")
+    print(enemy)
 
-    print("Preview (first 30 chars):", text_utils.preview(titled))
-    print("Word count:", stats_utils.word_count(cleaned))
-    print("Character count:", stats_utils.char_count(cleaned))
-    print("Line count:", stats_utils.line_count(raw_text))
+    # the battle continues until one character is defeated
+    while player.is_alive() and enemy.is_alive():
+
+        print("\nChoose an action:")
+        print("1. Attack")
+        print("2. Heal")
+        print("3. Double Slash")
+
+        choice = input("Enter your choice: ")
+
+        if choice == "1":
+
+            player.basic_attack(enemy)
+
+        elif choice == "2":
+
+            player.heal()
+
+        elif choice == "3":
+
+            player.double_slash(enemy)
+
+        else:
+
+            print("Invalid choice. Please enter 1, 2, or 3.")
+            continue
+
+        if enemy.is_alive():
+
+            print("\nEnemy turn:")
+
+            if random.choice([True, False]):
+
+                enemy.charge(player)
+
+            else:
+
+                enemy.basic_attack(player)
+
+    # Final result
+    if player.is_alive():
+
+        print("\nYou defeated the enemy!")
+
+    else:
+
+        print("\nYou were defeated.")
+
 
 if __name__ == "__main__":
     main()
