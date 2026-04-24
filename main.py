@@ -1,78 +1,145 @@
-import random
-from game_entities import Player, Enemy
-
-# Main program for the battle game.
-# Imports the Player and Enemy classes and runs the battle encounter.
-
-# Creates a random enemy for the encounter
-def create_random_enemy():
-
-    monster = random.choice(["wolf", "goblin", "orc"])
-
-    return Enemy(monster)
+import logging
+from currency_api import CurrencyDashboard
+from currency_labels import currency_labels
+from visualization import create_line_chart, create_comparison_bar_chart
 
 
-def main():
+# Configure logging
+logging.basicConfig(
+    filename="currency_dashboard.log",
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
 
-    print("=== Simple Battle Game ===")
 
-    player_name = input("Enter your character name: ")
+# Display supported currencies
+def display_supported_currencies() -> None:
+    """Display supported currency codes and labels for the user."""
+    print("\n=== Supported Currency Examples ===")
+    for code, name in currency_labels.items():
+        print(f"{code} - {name}")
 
-    player = Player(player_name)
 
-    enemy = create_random_enemy()
+# Getting valid currency code from user
+def get_currency_input(prompt_text: str, dashboard: CurrencyDashboard) -> str:
+    """Prompt the user for a valid currency code."""
+    while True:
+        user_input = input(prompt_text).strip().upper()
 
-    print("\nA wild enemy appears!")
-    print(enemy)
+        try:
+            dashboard.validate_currency_code(user_input)
+            return user_input
+        except ValueError as error:
+            print(f"Error: {error}")
+            logging.error("Invalid currency input: %s", user_input)
 
-    # the battle continues until one character is defeated
-    while player.is_alive() and enemy.is_alive():
 
-        print("\nChoose an action:")
-        print("1. Attack")
-        print("2. Heal")
-        print("3. Double Slash")
+# Getting valid amount from user
+def get_amount_input(prompt_text: str, dashboard: CurrencyDashboard) -> float:
+    """Prompt the user for a valid positive amount."""
+    while True:
+        user_input = input(prompt_text).strip()
 
-        choice = input("Enter your choice: ")
+        try:
+            amount = float(user_input)
+            dashboard.validate_amount(amount)
+            return amount
+        except ValueError:
+            print("Error: Please enter a valid positive number.")
+            logging.error("Invalid amount input: %s", user_input)
 
-        if choice == "1":
 
-            player.basic_attack(enemy)
+# Asking user if they want to continue
+def ask_to_continue() -> bool:
+    """Ask the user whether they want to run another comparison."""
+    while True:
+        choice = input("\nWould you like to run another comparison? (yes/no): ")
+        choice = choice.strip().lower()
 
-        elif choice == "2":
-
-            player.heal()
-
-        elif choice == "3":
-
-            player.double_slash(enemy)
-
+        if choice in ["yes", "y"]:
+            return True
+        elif choice in ["no", "n"]:
+            print("\nThank you for using the Currency Exchange Dashboard.")
+            print("Program closing.")
+            return False
         else:
-
-            print("Invalid choice. Please enter 1, 2, or 3.")
-            continue
-
-        if enemy.is_alive():
-
-            print("\nEnemy turn:")
-
-            if random.choice([True, False]):
-
-                enemy.charge(player)
-
-            else:
-
-                enemy.basic_attack(player)
-
-    # Final result
-    if player.is_alive():
-
-        print("\nYou defeated the enemy!")
-
-    else:
-
-        print("\nYou were defeated.")
+            print("Please enter yes or no.")
 
 
+# Running one dashboard session
+def run_dashboard() -> None:
+    """Run one full currency dashboard session."""
+    dashboard = CurrencyDashboard()
+
+    print("\n=== Currency Exchange Dashboard ===")
+    display_supported_currencies()
+
+    base_currency = get_currency_input(
+        "\nEnter base currency code (example: USD): ",
+        dashboard
+    )
+    target_currency = get_currency_input(
+        "Enter target currency code (example: EUR): ",
+        dashboard
+    )
+    amount = get_amount_input(
+        "Enter amount to convert: ",
+        dashboard
+    )
+
+    try:
+        # Retrieving the latest exchange rate conversion
+        converted_amount = dashboard.get_latest_rate(
+            base_currency,
+            target_currency,
+            amount
+        )
+
+        print("\n=== Conversion Result ===")
+        print(
+            f"{amount:.2f} {currency_labels.get(base_currency, base_currency)} "
+            f"= {converted_amount:.2f} "
+            f"{currency_labels.get(target_currency, target_currency)}"
+        )
+
+        # Retrieving historical exchange rates
+        history_df = dashboard.get_historical_rates(
+            base_currency,
+            target_currency
+        )
+
+        print("\n=== Historical Exchange Rate Data ===")
+        print(history_df.head())
+
+        # Retrieving comparison data for several currencies
+        comparison_df = dashboard.get_currency_comparison(
+            base_currency,
+            amount
+        )
+
+        print("\n=== Currency Comparison Data ===")
+        print(comparison_df)
+
+        # Creating project charts
+        create_line_chart(history_df, base_currency, target_currency)
+        create_comparison_bar_chart(comparison_df, base_currency)
+
+        logging.info(
+            "Successful conversion: %s to %s for amount %.2f",
+            base_currency,
+            target_currency,
+            amount
+        )
+
+    except Exception as error:
+        print(f"Error: {error}")
+        logging.exception("Program error occurred")
+
+
+# Main program
 if __name__ == "__main__":
-    main()
+    keep_running = True
+
+    while keep_running:
+        run_dashboard()
+        keep_running = ask_to_continue()
